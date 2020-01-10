@@ -1,0 +1,1364 @@
+{
+    "Mappings": {
+        "Image2Region": {
+            "ap-northeast-1": {
+                "64": "ami-1a15c77b"
+            },
+            "ap-northeast-2": {
+                "64": "ami-a04297ce"
+            },
+            "ap-south-1": {
+                "64": "ami-cacbbea5"
+            },
+            "ap-southeast-1": {
+                "64": "ami-7243e611"
+            },
+            "ap-southeast-2": {
+                "64": "ami-55d4e436"
+            },
+            "eu-central-1": {
+                "64": "ami-0044b96f"
+            },
+            "eu-west-1": {
+                "64": "ami-d41d58a7"
+            },
+            "sa-east-1": {
+                "64": "ami-b777e4db"
+            },
+            "us-east-1": {
+                "64": "ami-c481fad3"
+            },
+            "us-west-1": {
+                "64": "ami-de347abe"
+            },
+            "us-west-2": {
+                "64": "ami-b04e92d0"
+            }
+        }
+    },
+    "Outputs": {
+        "AdministrationConsoleURL": {
+            "Description": "Administration console",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {
+                            "Fn::GetAtt": [
+                                "sysdigOnpremFullDistributedConsole",
+                                "PublicIp"
+                            ]
+                        },
+                        ":8800/dashboard"
+                    ]
+                ]
+            }
+        },
+        "SysdigcloudConsoleURL": {
+            "Description": "Sysdigcloud console",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {
+                            "Fn::GetAtt": [
+                                "sysdigOnpremFullDistributedConsole",
+                                "PublicIp"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "AgentImageTag": {
+            "Default": "latest",
+            "Type": "String"
+        },
+        "CassandraClusterSize": {
+            "Default": "2",
+            "Type": "String"
+        },
+        "CassandraDiskSize": {
+            "Default": "100",
+            "Type": "String"
+        },
+        "InfrastructureName": {
+            "Default": "sysdigcloud-on-prem-full-distributed",
+            "Type": "String"
+        },
+        "InstanceType": {
+            "Default": "m3.medium",
+            "Type": "String"
+        },
+        "LicenseFileURL": {
+            "Default": "",
+            "Type": "String"
+        },
+        "RedundancyApi": {
+            "Default": "1",
+            "Type": "String"
+        },
+        "RedundancyCollector": {
+            "Default": "1",
+            "Type": "String"
+        },
+        "RedundancyWorker": {
+            "Default": "1",
+            "Type": "String"
+        },
+        "SSHKey": {
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "ServersDiskSize": {
+            "Default": "20",
+            "Type": "String"
+        },
+        "SysdigcloudEmail": {
+            "Default": "",
+            "Type": "String"
+        },
+        "SysdigcloudPassword": {
+            "Default": "",
+            "NoEcho": true,
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "SgRulealltraffic0b5895eb6dd6f286e781dddda9546ba5": {
+            "Properties": {
+                "FromPort": "0",
+                "GroupId": {
+                    "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                },
+                "IpProtocol": "-1",
+                "SourceSecurityGroupId": {
+                    "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                },
+                "ToPort": "65535"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "SgRulereplicatedConsole64ab7cdeae771416ece8adfcc773f9bf": {
+            "Properties": {
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": "8800",
+                "GroupId": {
+                    "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                },
+                "IpProtocol": "tcp",
+                "ToPort": "8800"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "SgRulesysdigcloudCollector62cfc7beab216c76dad67a3b2e77e5de": {
+            "Properties": {
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": "6443",
+                "GroupId": {
+                    "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                },
+                "IpProtocol": "tcp",
+                "ToPort": "6443"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "SgRulesysdigcloudConsole33425e1c1e3f2faf6ae6eed3c76c57da": {
+            "Properties": {
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": "443",
+                "GroupId": {
+                    "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                },
+                "IpProtocol": "tcp",
+                "ToPort": "443"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "VPCGWAttachement": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "internetGW"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "Vpc": {
+            "Properties": {
+                "CidrBlock": "10.10.0.0/16",
+                "EnableDnsHostnames": "true",
+                "EnableDnsSupport": "true",
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "InfrastructureName"
+                                    },
+                                    "vpc"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::VPC"
+        },
+        "internetGW": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "internetRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "internetGW"
+                },
+                "RouteTableId": {
+                    "Ref": "sysdigOnpremFullDistributedroutingTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "sysdigOnpremFullDistributedApiAutoscalingGroup": {
+            "Properties": {
+                "AvailabilityZones": [
+                    {
+                        "Fn::Select": [
+                            "0",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::Select": [
+                            "1",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    }
+                ],
+                "DesiredCapacity": {
+                    "Ref": "RedundancyApi"
+                },
+                "HealthCheckGracePeriod": 600,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "sysdigOnpremFullDistributedApiLaunchConfig"
+                },
+                "MaxSize": 100,
+                "MinSize": 0,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "sysdig",
+                                    "OnpremFullDistributed",
+                                    "api"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Role",
+                        "PropagateAtLaunch": true,
+                        "Value": "api"
+                    },
+                    {
+                        "Key": "Infrastructure",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    }
+                ],
+                "TerminationPolicies": [
+                    "NewestInstance"
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet0"
+                    },
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet1"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "sysdigOnpremFullDistributedApiLaunchConfig": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": {
+                                "Ref": "ServersDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdk",
+                        "VirtualName": "ephemeral0"
+                    },
+                    {
+                        "DeviceName": "/dev/sdh",
+                        "VirtualName": "ephemeral1"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": "true",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed-slave.sh | bash -s -- ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "sysdigOnpremFullDistributedConsole",
+                                        "PrivateIp"
+                                    ]
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "sysdigOnpremFullDistributedCassandraAutoscalingGroup": {
+            "Properties": {
+                "AvailabilityZones": [
+                    {
+                        "Fn::Select": [
+                            "0",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::Select": [
+                            "1",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    }
+                ],
+                "DesiredCapacity": {
+                    "Ref": "CassandraClusterSize"
+                },
+                "HealthCheckGracePeriod": 600,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "sysdigOnpremFullDistributedCassandraLaunchConfig"
+                },
+                "MaxSize": 100,
+                "MinSize": 0,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "sysdig",
+                                    "OnpremFullDistributed",
+                                    "cassandra"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Role",
+                        "PropagateAtLaunch": true,
+                        "Value": "cassandra"
+                    },
+                    {
+                        "Key": "Infrastructure",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    }
+                ],
+                "TerminationPolicies": [
+                    "NewestInstance"
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet0"
+                    },
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet1"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "sysdigOnpremFullDistributedCassandraLaunchConfig": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "false",
+                            "VolumeSize": {
+                                "Ref": "CassandraDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdk",
+                        "VirtualName": "ephemeral0"
+                    },
+                    {
+                        "DeviceName": "/dev/sdh",
+                        "VirtualName": "ephemeral1"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": "true",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed-slave.sh | bash -s -- ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "sysdigOnpremFullDistributedConsole",
+                                        "PrivateIp"
+                                    ]
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "sysdigOnpremFullDistributedCollectorAutoscalingGroup": {
+            "Properties": {
+                "AvailabilityZones": [
+                    {
+                        "Fn::Select": [
+                            "0",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::Select": [
+                            "1",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    }
+                ],
+                "DesiredCapacity": {
+                    "Ref": "RedundancyCollector"
+                },
+                "HealthCheckGracePeriod": 600,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "sysdigOnpremFullDistributedCollectorLaunchConfig"
+                },
+                "MaxSize": 100,
+                "MinSize": 0,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "sysdig",
+                                    "OnpremFullDistributed",
+                                    "collector"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Role",
+                        "PropagateAtLaunch": true,
+                        "Value": "collector"
+                    },
+                    {
+                        "Key": "Infrastructure",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    }
+                ],
+                "TerminationPolicies": [
+                    "NewestInstance"
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet0"
+                    },
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet1"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "sysdigOnpremFullDistributedCollectorLaunchConfig": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": {
+                                "Ref": "ServersDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdk",
+                        "VirtualName": "ephemeral0"
+                    },
+                    {
+                        "DeviceName": "/dev/sdh",
+                        "VirtualName": "ephemeral1"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": "true",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed-slave.sh | bash -s -- ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "sysdigOnpremFullDistributedConsole",
+                                        "PrivateIp"
+                                    ]
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "sysdigOnpremFullDistributedConsole": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": {
+                                "Ref": "ServersDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "NetworkInterfaces": [
+                    {
+                        "DeleteOnTermination": "true",
+                        "DeviceIndex": "0",
+                        "GroupSet": [
+                            {
+                                "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                            }
+                        ],
+                        "SubnetId": {
+                            "Ref": "sysdigOnpremFullDistributedsubnet0"
+                        }
+                    }
+                ],
+                "SourceDestCheck": "true",
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "sysdigOnpremFullDistributed-console"
+                    },
+                    {
+                        "Key": "Role",
+                        "Value": "lb_api,lb_collector"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed.sh | bash -s -- ",
+                                {
+                                    "Ref": "LicenseFileURL"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "CassandraClusterSize"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::EC2::Instance"
+        },
+        "sysdigOnpremFullDistributedDBAutoscalingGroup": {
+            "Properties": {
+                "AvailabilityZones": [
+                    {
+                        "Fn::Select": [
+                            "0",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::Select": [
+                            "1",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    }
+                ],
+                "DesiredCapacity": 1,
+                "HealthCheckGracePeriod": 600,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "sysdigOnpremFullDistributedDBLaunchConfig"
+                },
+                "MaxSize": 1,
+                "MinSize": 1,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "sysdig",
+                                    "OnpremFullDistributed",
+                                    "db"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Role",
+                        "PropagateAtLaunch": true,
+                        "Value": "mysql,redis"
+                    },
+                    {
+                        "Key": "Infrastructure",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    }
+                ],
+                "TerminationPolicies": [
+                    "NewestInstance"
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet0"
+                    },
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet1"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "sysdigOnpremFullDistributedDBLaunchConfig": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "false",
+                            "VolumeSize": {
+                                "Ref": "ServersDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdk",
+                        "VirtualName": "ephemeral0"
+                    },
+                    {
+                        "DeviceName": "/dev/sdh",
+                        "VirtualName": "ephemeral1"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": "true",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed-slave.sh | bash -s -- ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "sysdigOnpremFullDistributedConsole",
+                                        "PrivateIp"
+                                    ]
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "sysdigOnpremFullDistributedInfrastructureSg": {
+            "Properties": {
+                "GroupDescription": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "InfrastructureName"
+                            },
+                            "security-group"
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "InfrastructureName"
+                                    },
+                                    "security-group"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "sysdigOnpremFullDistributedServerIam": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": "/"
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "sysdigOnpremFullDistributedServerPolicy": {
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sns:Publish"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Action": [
+                                "ec2:DescribeTags"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "PolicyName": "ServerPolicy",
+                "Roles": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedServerIam"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Policy"
+        },
+        "sysdigOnpremFullDistributedServerRole": {
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedServerIam"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::InstanceProfile"
+        },
+        "sysdigOnpremFullDistributedWorkerAutoscalingGroup": {
+            "Properties": {
+                "AvailabilityZones": [
+                    {
+                        "Fn::Select": [
+                            "0",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::Select": [
+                            "1",
+                            {
+                                "Fn::GetAZs": ""
+                            }
+                        ]
+                    }
+                ],
+                "DesiredCapacity": {
+                    "Ref": "RedundancyWorker"
+                },
+                "HealthCheckGracePeriod": 600,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "sysdigOnpremFullDistributedWorkerLaunchConfig"
+                },
+                "MaxSize": 100,
+                "MinSize": 0,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "sysdig",
+                                    "OnpremFullDistributed",
+                                    "worker"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Role",
+                        "PropagateAtLaunch": true,
+                        "Value": "worker"
+                    },
+                    {
+                        "Key": "Infrastructure",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    }
+                ],
+                "TerminationPolicies": [
+                    "NewestInstance"
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet0"
+                    },
+                    {
+                        "Ref": "sysdigOnpremFullDistributedsubnet1"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "sysdigOnpremFullDistributedWorkerLaunchConfig": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": {
+                                "Ref": "ServersDiskSize"
+                            },
+                            "VolumeType": "gp2"
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdk",
+                        "VirtualName": "ephemeral0"
+                    },
+                    {
+                        "DeviceName": "/dev/sdh",
+                        "VirtualName": "ephemeral1"
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "sysdigOnpremFullDistributedServerRole"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "Image2Region",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": "true",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "SSHKey"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sysdigOnpremFullDistributedInfrastructureSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "set -exuo pipefail\n",
+                                "curl -sSL https://s3.amazonaws.com/draios-infrastructures/onprem/start-full-distributed-slave.sh | bash -s -- ",
+                                {
+                                    "Ref": "SysdigcloudEmail"
+                                },
+                                " ",
+                                {
+                                    "Ref": "SysdigcloudPassword"
+                                },
+                                " ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "sysdigOnpremFullDistributedConsole",
+                                        "PrivateIp"
+                                    ]
+                                },
+                                " ",
+                                {
+                                    "Ref": "AgentImageTag"
+                                },
+                                " ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "\n",
+                                "exit 0"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "sysdigOnpremFullDistributedroutingTable": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "InfrastructureName"
+                                    },
+                                    "route-table"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "sysdigOnpremFullDistributedsubnet0": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        0,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.10.0.0/26",
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "InfrastructureName"
+                                    },
+                                    "subnet",
+                                    "0"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "sysdigOnpremFullDistributedsubnet1": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        1,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.10.0.64/26",
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Infrastructure",
+                        "Value": {
+                            "Ref": "InfrastructureName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "InfrastructureName"
+                                    },
+                                    "subnet",
+                                    "1"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "sysdigOnpremFullDistributedsubnet2RT0": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "sysdigOnpremFullDistributedroutingTable"
+                },
+                "SubnetId": {
+                    "Ref": "sysdigOnpremFullDistributedsubnet0"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "sysdigOnpremFullDistributedsubnet2RT1": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "sysdigOnpremFullDistributedroutingTable"
+                },
+                "SubnetId": {
+                    "Ref": "sysdigOnpremFullDistributedsubnet1"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        }
+    }
+}
